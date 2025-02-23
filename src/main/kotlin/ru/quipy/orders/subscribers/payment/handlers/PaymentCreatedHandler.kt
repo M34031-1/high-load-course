@@ -12,6 +12,8 @@ import ru.quipy.orders.repository.OrderRepository
 import ru.quipy.payments.api.PaymentCreatedEvent
 import ru.quipy.payments.logic.PaymentService
 import ru.quipy.payments.logic.now
+import ru.quipy.orders.subscribers.payment.config.PaymentSemaphoreConfig
+
 
 @Service
 class PaymentCreatedHandler : EventHandler<PaymentCreatedEvent> {
@@ -22,8 +24,9 @@ class PaymentCreatedHandler : EventHandler<PaymentCreatedEvent> {
     @Autowired
     private lateinit var paymentService: PaymentService
 
-    //TODO: to config
-    private val semaphore: Semaphore = Semaphore(10, 0)
+    @Autowired
+    private lateinit var semaphore: Semaphore
+
 
     val logger: Logger = LoggerFactory.getLogger(PaymentCreatedHandler::class.java)
 
