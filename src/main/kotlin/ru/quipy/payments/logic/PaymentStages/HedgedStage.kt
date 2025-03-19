@@ -13,10 +13,6 @@ class HedgedStage(
 
     override suspend fun process(payment: Payment): ProcessResult {
 
-        withTimeout(hedgeDelay){
-            i -> next.process(payment)
-        }
-
         val firstRequest = GlobalScope.async {
             next.process(payment)
         }

@@ -40,11 +40,15 @@ class PaymentAccountsConfig {
     )
 
     private val accountTimeouts = mapOf<String, Duration>(
-        Pair("acc-16", Duration.ofMillis(1500)),
+        Pair("acc-16", Duration.ofMillis(1000)),
     )
 
     private val accountSemaphores = mapOf<String, Semaphore>(
         Pair("acc-16", Semaphore(permits = 5))
+    )
+
+    private val accountRetry = mapOf<String, Int>(
+        Pair("acc-16", 2)
     )
 
     private fun paymentStages(
@@ -52,19 +56,20 @@ class PaymentAccountsConfig {
         paymentService: EventSourcingService<UUID, PaymentAggregate, PaymentAggregateState>,
         rateLimiter: RateLimiter,
         timeout: Duration,
-        semaphore: Semaphore
+        semaphore: Semaphore,
+        retry: Int
     ) =
         RateLimitStage(
-            next = HedgedStage(
+            next = RetryStage(
                 next = SemaphoreStage(
                     next = ProcessStage(
                         paymentService,
                         properties,
-                        //timeout
+                        timeout
                     ),
                     semaphore = semaphore
                 ),
-                hedgeDelay = Duration.ofMillis(3000),
+                retryTimes = retry
             ),
             rateLimiter = rateLimiter,
         )
@@ -95,7 +100,8 @@ class PaymentAccountsConfig {
                         paymentService,
                         accountLimiters[it.accountName]!!,
                         accountTimeouts[it.accountName]!!,
-                        accountSemaphores[it.accountName]!!
+                        accountSemaphores[it.accountName]!!,
+                        accountRetry[it.accountName]!!
                     )
                 )
             }
