@@ -1,5 +1,6 @@
 package ru.quipy.payments.logic.PaymentStages
 
+import kotlinx.coroutines.delay
 import ru.quipy.payments.logic.PaymentStages.StageMarkers.RetryMarker
 import ru.quipy.payments.logic.PaymentStages.StageResults.ProcessResult
 
@@ -13,8 +14,9 @@ class RetryStage(
         for (x in 0 until retryTimes) {
             val result = next.process(payment)
 
-            if (result.retry)
-                continue
+            if (result.retry){
+                delay(timeMillis = 20)
+                continue}
 
             return result
         }
