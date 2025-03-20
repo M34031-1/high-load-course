@@ -46,7 +46,6 @@ class ProcessStage(
     private var timeout: Duration? = null
 
     override suspend fun process(payment: Payment) : ProcessResult {
-        val startTime = System.currentTimeMillis()
         logger.warn("[$accountName] Submitting payment request for payment ${payment.paymentId}")
 
         val transactionId = UUID.randomUUID()
@@ -81,7 +80,7 @@ class ProcessStage(
             }
 
             if (!body.result)
-                return ProcessResult(retry = true, processingTime = System.currentTimeMillis() - startTime)
+                return ProcessResult(retry = true)
 
             logger.warn("[$accountName] Payment processed for txId: $transactionId, payment: ${payment.paymentId}, succeeded: ${body.result}, message: ${body.message}")
 
@@ -110,6 +109,6 @@ class ProcessStage(
             }
         }
 
-        return ProcessResult(retry = false, processingTime = System.currentTimeMillis() - startTime)
+        return ProcessResult(retry = false)
     }
 }
