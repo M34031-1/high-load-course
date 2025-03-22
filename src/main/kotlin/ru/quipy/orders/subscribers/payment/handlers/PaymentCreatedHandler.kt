@@ -8,10 +8,12 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 import ru.quipy.OnlineShopApplication
 import ru.quipy.common.exceptions.PaymentException
+import ru.quipy.common.utils.NamedThreadFactory
 import ru.quipy.orders.repository.OrderRepository
 import ru.quipy.payments.api.PaymentCreatedEvent
 import ru.quipy.payments.logic.PaymentService
 import ru.quipy.payments.logic.now
+import java.util.concurrent.Executors
 
 @Service
 class PaymentCreatedHandler : EventHandler<PaymentCreatedEvent> {
@@ -22,15 +24,19 @@ class PaymentCreatedHandler : EventHandler<PaymentCreatedEvent> {
     @Autowired
     private lateinit var paymentService: PaymentService
 
+    companion object {
+        val handlerExecutors = Executors.newFixedThreadPool(50, NamedThreadFactory("payment-handler-executor"))
+    }
+
     //TODO: to config
-    private val semaphore: Semaphore = Semaphore(14, 0)
+    private val semaphore: Semaphore = Semaphore(50, 0)
 
     val logger: Logger = LoggerFactory.getLogger(PaymentCreatedHandler::class.java)
 
     override suspend fun handle(event: PaymentCreatedEvent) {
         semaphore.acquire()
 
-        OnlineShopApplication.Companion.appExecutor.submit {
+        handlerExecutors.submit {
             runBlocking {
                 try {
                     val order = orderRepository.findById(event.orderId)
