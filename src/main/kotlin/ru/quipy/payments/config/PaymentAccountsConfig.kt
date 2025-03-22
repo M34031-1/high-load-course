@@ -6,7 +6,6 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import kotlinx.coroutines.sync.Semaphore
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import ru.quipy.common.utils.FixedWindowRateLimiter
 import ru.quipy.common.utils.RateLimiter
 import ru.quipy.common.utils.SlidingWindowRateLimiter
 import ru.quipy.core.EventSourcingService
@@ -15,14 +14,15 @@ import ru.quipy.payments.logic.PaymentAccountProperties
 import ru.quipy.payments.logic.PaymentAggregateState
 import ru.quipy.payments.logic.PaymentExternalSystemAdapter
 import ru.quipy.payments.logic.PaymentExternalSystemAdapterImpl
-import ru.quipy.payments.logic.PaymentStages.*
+import ru.quipy.payments.logic.PaymentStages.ProcessStage
+import ru.quipy.payments.logic.PaymentStages.RateLimitStage
+import ru.quipy.payments.logic.PaymentStages.SemaphoreStage
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.time.Duration
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 
 @Configuration
@@ -33,22 +33,22 @@ class PaymentAccountsConfig {
         private val mapper = ObjectMapper().registerKotlinModule().registerModules(JavaTimeModule())
     }
 
-    private val allowedAccounts = setOf("acc-16")
+    private val allowedAccounts = setOf("acc-9")
 
     private val accountLimiters = mapOf<String, RateLimiter>(
-        Pair("acc-16", SlidingWindowRateLimiter(6, Duration.ofMillis(1000))),
+        Pair("acc-9", SlidingWindowRateLimiter(110, Duration.ofMillis(1000))),
     )
 
     private val accountTimeouts = mapOf<String, Duration>(
-        Pair("acc-16", Duration.ofMillis(1000)),
+        Pair("acc-9", Duration.ofMillis(1000)),
     )
 
     private val accountSemaphores = mapOf<String, Semaphore>(
-        Pair("acc-16", Semaphore(permits = 5))
+        Pair("acc-9", Semaphore(permits = 50))
     )
 
     private val accountRetry = mapOf<String, Int>(
-        Pair("acc-16", 2)
+        Pair("acc-9", 2)
     )
 
     private fun paymentStages(
@@ -60,18 +60,15 @@ class PaymentAccountsConfig {
         retry: Int
     ) =
         RateLimitStage(
-            next = RetryStage(
-                next = SemaphoreStage(
-                    next = ProcessStage(
-                        paymentService,
-                        properties,
-                        timeout
-                    ),
-                    semaphore = semaphore
+            next = SemaphoreStage(
+                next = ProcessStage(
+                    paymentService,
+                    properties,
+                    timeout
                 ),
-                retryTimes = retry
+                semaphore = semaphore
             ),
-            rateLimiter = rateLimiter,
+            rateLimiter = rateLimiter
         )
 
 
