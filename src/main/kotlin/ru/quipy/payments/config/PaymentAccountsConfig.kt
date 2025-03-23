@@ -17,6 +17,7 @@ import ru.quipy.payments.logic.PaymentExternalSystemAdapterImpl
 import ru.quipy.payments.logic.PaymentStages.ProcessStage
 import ru.quipy.payments.logic.PaymentStages.RateLimitStage
 import ru.quipy.payments.logic.PaymentStages.SemaphoreStage
+import ru.quipy.payments.logic.PaymentStages.ShortcircuitStage
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -57,14 +58,19 @@ class PaymentAccountsConfig {
         rateLimiter: RateLimiter,
         timeout: Duration,
         semaphore: Semaphore,
-        retry: Int
+        averageProcessingTime: Duration,
+        retry: Int = 0
     ) =
         RateLimitStage(
             next = SemaphoreStage(
-                next = ProcessStage(
-                    paymentService,
-                    properties,
-                    timeout
+                next = ShortcircuitStage(
+                    next = ProcessStage(
+                        paymentService,
+                        properties,
+                        timeout
+                    ),
+                    paymentESService = paymentService,
+                    averageExecutionDuration = averageProcessingTime
                 ),
                 semaphore = semaphore
             ),
@@ -98,6 +104,7 @@ class PaymentAccountsConfig {
                         accountLimiters[it.accountName]!!,
                         accountTimeouts[it.accountName]!!,
                         accountSemaphores[it.accountName]!!,
+                        it.averageProcessingTime,
                         accountRetry[it.accountName]!!
                     )
                 )
