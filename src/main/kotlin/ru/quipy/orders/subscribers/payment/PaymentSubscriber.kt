@@ -31,7 +31,6 @@ class PaymentSubscriber {
     @Autowired
     private lateinit var paymentCreatedEventHandler: EventHandler<PaymentCreatedEvent>
 
-
     @PostConstruct
     fun init() {
         subscriptionsManager.createSubscriber(

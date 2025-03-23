@@ -2,7 +2,14 @@ package ru.quipy.payments.logic.PaymentStages
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody
@@ -71,7 +78,9 @@ class ProcessStage(
         }
 
         try {
-            val response = client.newCall(request).execute()
+            val response = withContext(Dispatchers.IO) {
+                client.newCall(request).execute()
+            }
 
             val body = try {
                 mapper.readValue(response.body?.string(), ExternalSysResponse::class.java)
