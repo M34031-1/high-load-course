@@ -18,6 +18,7 @@ import ru.quipy.payments.logic.PaymentStages.ProcessStage
 import ru.quipy.payments.logic.PaymentStages.RateLimitStage
 import ru.quipy.payments.logic.PaymentStages.SemaphoreStage
 import ru.quipy.payments.logic.PaymentStages.ShortcircuitStage
+import ru.quipy.payments.logic.gateways.PaymentGateway
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -34,22 +35,22 @@ class PaymentAccountsConfig {
         private val mapper = ObjectMapper().registerKotlinModule().registerModules(JavaTimeModule())
     }
 
-    private val allowedAccounts = setOf("acc-9")
+    private val allowedAccounts = setOf("acc-12")
 
     private val accountLimiters = mapOf<String, RateLimiter>(
-        Pair("acc-9", SlidingWindowRateLimiter(110, Duration.ofMillis(1000))),
+        Pair("acc-12", SlidingWindowRateLimiter(1000, Duration.ofMillis(1000))),
     )
 
-    private val accountTimeouts = mapOf<String, Duration>(
-        Pair("acc-9", Duration.ofMillis(1000)),
+    private val accountTimeouts = mapOf<String, Duration?>(
+        Pair("acc-12", Duration.ofMillis(10000)),
     )
 
     private val accountSemaphores = mapOf<String, Semaphore>(
-        Pair("acc-9", Semaphore(permits = 50))
+        Pair("acc-12", Semaphore(permits = 10000))
     )
 
     private val accountRetry = mapOf<String, Int>(
-        Pair("acc-9", 2)
+        Pair("acc-12", 0)
     )
 
     private fun paymentStages(
@@ -59,6 +60,7 @@ class PaymentAccountsConfig {
         timeout: Duration,
         semaphore: Semaphore,
         averageProcessingTime: Duration,
+        paymentGateway: PaymentGateway,
         retry: Int = 0
     ) =
         RateLimitStage(
@@ -67,6 +69,7 @@ class PaymentAccountsConfig {
                     next = ProcessStage(
                         paymentService,
                         properties,
+                        paymentGateway,
                         timeout
                     ),
                     paymentESService = paymentService,
@@ -79,7 +82,7 @@ class PaymentAccountsConfig {
 
 
     @Bean
-    fun accountAdapters(paymentService: EventSourcingService<UUID, PaymentAggregate, PaymentAggregateState>): List<PaymentExternalSystemAdapter> {
+    fun accountAdapters(paymentService: EventSourcingService<UUID, PaymentAggregate, PaymentAggregateState>, paymentGateway: PaymentGateway): List<PaymentExternalSystemAdapter> {
         val request = HttpRequest.newBuilder()
             .uri(URI("http://${PAYMENT_PROVIDER_HOST_PORT}/external/accounts?serviceName=onlineStore")) // todo sukhoa service name
             .GET()
@@ -105,6 +108,7 @@ class PaymentAccountsConfig {
                         accountTimeouts[it.accountName]!!,
                         accountSemaphores[it.accountName]!!,
                         it.averageProcessingTime,
+                        paymentGateway,
                         accountRetry[it.accountName]!!
                     )
                 )
