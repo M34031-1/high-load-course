@@ -26,7 +26,7 @@ class PaymentCreatedHandler : EventHandler<PaymentCreatedEvent> {
 
     private var scope = CoroutineScope(Dispatchers.Default) //TODO: define the scope of subscriber and dispose this if necessary
 
-    private val semaphore: Semaphore = Semaphore(100, 0)
+    private val semaphore: Semaphore = Semaphore(10000, 0)
 
     val logger: Logger = LoggerFactory.getLogger(PaymentCreatedHandler::class.java)
 
