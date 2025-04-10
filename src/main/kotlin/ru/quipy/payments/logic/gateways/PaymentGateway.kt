@@ -3,7 +3,6 @@ package ru.quipy.payments.logic.gateways
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.*
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.context.annotation.Scope
 import org.springframework.stereotype.Service
@@ -34,8 +33,6 @@ class PaymentGateway {
     }
 
     companion object {
-        val logger = LoggerFactory.getLogger(PaymentGateway::class.java)
-
         val emptyBody = RequestBody.create(null, ByteArray(0))
     }
 
@@ -47,31 +44,21 @@ class PaymentGateway {
                 .post(emptyBody)
                 .build()
 
-            logger.error("Pushing a request to client")
             client.newCall(request).enqueue(object : Callback {
                 override fun onResponse(call: Call, response: Response) {
                     try {
                         continuation.resume(response) { throwable ->
                             call.cancel()
                             response.close()
-                            logger.error(
-                                "Payment cancelled: ${payload.paymentId}, txId: ${payload.transactionId}",
-                                throwable
-                            )
                             continuation.resumeWithException(throwable)
                         }
                     } catch (e: Exception) {
                         response.close()
-                        logger.error("Payment failed: ${payload.paymentId}, txId: ${payload.transactionId}", e)
                         continuation.resumeWithException(e)
                     }
                 }
 
                 override fun onFailure(call: Call, e: IOException) {
-                    logger.error(
-                        "Payment failed with an IOException: ${payload.paymentId}, txId: ${payload.transactionId}",
-                        e
-                    )
                     continuation.resumeWithException(e)
                 }
             })

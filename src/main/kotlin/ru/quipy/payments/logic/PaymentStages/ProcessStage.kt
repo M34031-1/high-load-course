@@ -74,7 +74,7 @@ class ProcessStage(
             if (!result)
                 return ProcessResult(retry = true, processingTime = System.currentTimeMillis() - startTime)
 
-            logger.warn("[$accountName] Payment processed for txId: $transactionId, payment: ${payment.paymentId}, succeeded: ${result}, message: template message")
+            logger.warn("[$accountName] Payment processed for txId: $transactionId, payment: ${payment.paymentId}, succeeded: ${result}, message: ${body.message}")
 
             // Здесь мы обновляем состояние оплаты в зависимости от результата в базе данных оплат.
             // Это требуется сделать ВО ВСЕХ ИСХОДАХ (успешная оплата / неуспешная / ошибочная ситуация)

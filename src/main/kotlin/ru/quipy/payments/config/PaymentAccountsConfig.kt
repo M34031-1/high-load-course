@@ -42,11 +42,11 @@ class PaymentAccountsConfig {
     )
 
     private val accountTimeouts = mapOf<String, Duration?>(
-        Pair("acc-12", Duration.ofMillis(10000)),
+        Pair("acc-12", Duration.ofMillis(12000)),
     )
 
     private val accountSemaphores = mapOf<String, Semaphore>(
-        Pair("acc-12", Semaphore(permits = 10000))
+        Pair("acc-12", Semaphore(permits = 20000))
     )
 
     private val accountRetry = mapOf<String, Int>(
